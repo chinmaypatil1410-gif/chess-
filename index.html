@@ -1924,14 +1924,19 @@ function squareFromCoords(mx,my){
   return[br,bf];
 }
 
-canvas.addEventListener('click',function(e){
+// Shared board-tap handler — called by both click and touchstart
+function handleBoardInput(clientX, clientY){
   if(gameState.gameOver||gameState.animating)return;
   if(gameState.mode==='online'&&gameState.turn!==gameState.playerColor)return;
   if(gameState.mode==='ai'&&gameState.turn===gameState.aiColor)return;
 
   const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left;
-  const my=e.clientY-rect.top;
+  // Scale from CSS pixels → canvas pixels (critical for high-DPI / zoomed mobile screens)
+  const scaleX=canvas.width/rect.width;
+  const scaleY=canvas.height/rect.height;
+  const mx=(clientX-rect.left)*scaleX;
+  const my=(clientY-rect.top)*scaleY;
+
   const sq=squareFromCoords(mx,my);
   if(!sq)return;
   const[r,f]=sq;
@@ -1952,13 +1957,16 @@ canvas.addEventListener('click',function(e){
       selectSquare(r,f);
     }
   }
+}
+
+canvas.addEventListener('click',function(e){
+  handleBoardInput(e.clientX, e.clientY);
 });
 
 canvas.addEventListener('touchstart',function(e){
-  e.preventDefault();
-  const touch=e.touches[0];
-  const fakeEvent={clientX:touch.clientX,clientY:touch.clientY};
-  canvas.dispatchEvent(Object.assign(new MouseEvent('click'),fakeEvent));
+  e.preventDefault(); // stops the 300 ms click-delay and prevents scroll
+  const touch=e.changedTouches[0];
+  handleBoardInput(touch.clientX, touch.clientY);
 },{passive:false});
 
 function selectSquare(r,f){
